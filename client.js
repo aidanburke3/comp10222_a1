@@ -7,17 +7,12 @@ const axios = require('axios');
 const baseUrl = 'http://localhost:3000/api';
 
 // run tests
-test1();
-
-test2();
-
+test1()
+.then(test2);
 
 async function test1() {
-    var testPassed = {
-        "step1": true,
-        "step2": true,
-        "step3": true
-    }
+
+    // test data
     const item1 = {
         "title":"The Shawshank Redemption",
         "release_year": 1994,
@@ -31,56 +26,191 @@ async function test1() {
     const item2Update = {
         "title":"Inception",
         "release_year": 2010,
-        "timestamp":"2010-12-03T18:20:20.200"
+        "timestamp":"2010-12-03T18:20:00.000"
     };
-    var results = await Promise.all([
-        axios.post(baseUrl, item1), 
-        axios.post(baseUrl, item2),
-        axios.put(baseUrl+'/2', item2Update),
-        axios.get(baseUrl+'/1'),
-        axios.get(baseUrl+'/2')
-    ]);
 
-    if (results[0].data.status !== "CREATE ENTRY SUCCESSFUL" 
-        || results[1].data.status !== "CREATE ENTRY SUCCESSFUL") {
-            testPassed.step1 = false;
+    console.log("Test 1");
+
+    // add item 1
+    let results = await axios.post(baseUrl, item1);
+
+    // added properly?
+    if (results?.data?.status !== "CREATE ENTRY SUCCESSFUL" ) {
+            console.log("FAILED AT STEP 1");
+            console.log(results?.data?.status);
+            return;
     }
 
-    if (results[2].data.status !== "UPDATE ITEM SUCCESSFUL") {
-        testPassed.step2 = false;
-    }
-    console.log(results[3].data);
-    if (results[3].data.title !== item1.title
-        || results[3].data.release_year !== item1.release_year
-        || results[3].data.timestamp !== item1.timestamp) {
-            testPassed.step3 = false;
-    }
-    console.log(results[4].data);
-    if (results[4].data.title !== item2Update.title
-        || results[4].data.release_year !== item2Update.release_year
-        || results[4].data.timestamp !== item2Update.timestamp) {
-            testPassed.step3 = false;
-    }
-    console.log(testPassed);
+    // add item 2
+    results = await axios.post(baseUrl, item2);
 
-    console.log(testPassed.step1 && testPassed.step2 && testPassed.step3 ? "PASSED" : "FAILED");
+    // added properly?
+    if (results?.data?.status !== "CREATE ENTRY SUCCESSFUL") {
+        console.log("FAILED AT STEP 1");
+        console.log(results?.data?.status);
+        return;
+    }
+
+    // update item 2
+    results = await axios.put(baseUrl+'/2', item2Update);
+
+    // updated properly?
+    if (results?.data?.status !== "UPDATE ITEM SUCCESSFUL") {
+        console.log("FAILED AT STEP 2");
+        console.log(results?.data?.status);
+        return;
+    }
+
+    // get item 1
+    results = await axios.get(baseUrl+'/1');
+
+    // data correct?
+    if (results?.data?.title !== item1.title
+        || results?.data?.release_year !== item1.release_year
+        || results?.data?.timestamp !== item1.timestamp) {
+            console.log("FAILED AT STEP 3");
+            console.log(item1);
+            console.log(results?.data);
+            return;
+    }
+
+    // get item 2
+    results = await axios.get(baseUrl+'/2');
+
+    // data correct?
+    if (results?.data?.title !== item2Update.title
+        || results?.data?.release_year !== item2Update.release_year
+        || results?.data?.timestamp !== item2Update.timestamp) {
+            console.log("FAILED AT STEP 3");
+            console.log(item2Update);
+            console.log(results?.data);
+            return;
+    }
+    console.log("PASSED");
+    await axios.delete(baseUrl);  // reset database
 
 }
 
 async function test2() {
-    var testPassed = {
-        "step1": true,
-        "step2": true,
-        "step3": true,
-        "step4": true,
-        "step5": true,
-        "step6": true
-    }
+
+    // test data
+    const collection = [
+        {
+            "title": "Citizen Kane",
+            "release_year": 1941,
+            "timestamp": "2009-05-12T12:34:56.000"
+        },
+        {
+            "title": "The Godfather",
+            "release_year": 1972,
+            "timestamp": "2010-04-17T06:41:00.000"
+        },
+        {
+            "title": "Casablanca",
+            "release_year": 1942,
+            "timestamp": "2011-12-24T23:59:59.999"
+
+        },
+        {
+            "title": "Gone with the Wind",
+            "release_year": 1939,
+            "timestamp": "2012-01-01T00:00:00.000"
+        }
+    ];
+
+    const itemToDelete = 1;
+
+    const collectionAfterDelete = collection.filter((item, index) => index !== itemToDelete-1);
+
+
 
     console.log("Test 2");
+    
+    // add collection
+    let results = await axios.put(baseUrl, collection);
 
-    // TODO: implement test 2
+    // added properly?
+    if (results?.data?.status !== "REPLACE COLLECTION SUCCESSFUL") {
+        console.log("FAILED AT STEP 1");
+        console.log(results.data);
+        return;
+    }
 
+    // get collection
+    results = await axios.get(baseUrl);
+    
+    // data correct?
+    if (results.data.length !== collection.length) {
+        console.log("FAILED AT STEP 2");
+        console.log(collection);
+        console.log(results.data);
+        return;
+    }
 
-    console.log(testPassed.step1 && testPassed.step2 && testPassed.step3 && testPassed.step4 && testPassed.step5 && testPassed.step6 ? "PASSED" : "FAILED");
+    for (let i = 0; i < collection.length; i++) {
+        if (results?.data[i]?.title !== collection[i].title
+            || results?.data[i]?.release_year !== collection[i].release_year
+            || results?.data[i]?.timestamp !== collection[i].timestamp) {
+                console.log("FAILED AT STEP 2");
+                console.log(i);
+                console.log(collection[i]);
+                console.log(results?.data[i]);
+                return;
+            }
+    }
+
+    // delete item at id = itemToDelete 
+    results = await axios.delete(baseUrl+'/' + itemToDelete);
+
+    // // deleted properly?
+    if (results?.data?.status !== "DELETE ITEM SUCCESSFUL") {
+        console.log("FAILED AT STEP 3");
+        console.log(results?.data?.status);
+        return;
+    }
+
+    // // get collection
+    results = await axios.get(baseUrl);
+
+    // // data correct?
+    if (results?.data?.length !== collection.length - 1) {
+        console.log("FAILED AT STEP 4");
+        console.log(collection);
+        console.log(results?.data);
+        return;
+    }
+    for (let i = 0; i < collection.length-1; i++) {
+        if (results?.data[i]?.title !== collectionAfterDelete[i].title
+            || results?.data[i]?.release_year !== collectionAfterDelete[i].release_year
+            || results?.data[i]?.timestamp !== collectionAfterDelete[i].timestamp) {
+                console.log("FAILED AT STEP 4");
+                console.log(i);
+                console.log(collectionAfterDelete[i]);
+                console.log(results?.data[i]);
+                return;
+            }
+    }
+
+    // delete collection
+    results = await axios.delete(baseUrl);
+
+    // deleted properly?
+    if (results?.data?.status !== "DELETE COLLECTION SUCCESSFUL") {
+        console.log("FAILED AT STEP 5");
+        console.log(results?.data);
+        return
+    }
+
+    // get collection
+    results = await axios.get(baseUrl);
+
+    // data correct?
+    if (results?.data?.length !== 0) {
+        console.log("FAILED AT STEP 6");
+        console.log(results?.data);
+        return;
+    }
+
+    console.log("PASSED");
+    await axios.delete(baseUrl);  // reset database
 }
